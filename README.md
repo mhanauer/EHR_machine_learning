@@ -169,11 +169,9 @@ fitControl <- trainControl(## 10-fold CV
 ```
 adaboost: This is a boosting model, which means it identifies weak (i.e., smaller trees) base (i.e., decision trees, linear regression) models interatively and makes adjustments based on the results (i.e., some loss function).  It identifies which observations it is failing to predict accurately and attempts to adjust the model and updates the weights for each observations (weights must sum to one).  Then when the decision trees (i.e., cuts in the variables and interactions between them) are being updated the weights for the observations that are most inaccurate play a larger role.  We then continue this process until some difference between the loss functions is below some specified threshold. 
 
-gbm: Another boosting technique, but instead of updating weights and training on those, it uses pseudo-residuals to identify the most problematic observations and updates the model using the same process as gbm.  It uses gradient descent.  It starts off with a random set for the trees, calculates the residuals and subtracts those from the model and uses the differences to identify the observations with the highest errors.  It can make changes, within the set parameters (e.g., learning rate interaction-depth), to the trees improve the model in the direction (e.g., negative, positive) and within the learning rate
+gbm: Another boosting technique, but instead of updating weights and training on those, it uses pseudo-residuals to identify the most problematic observations and updates the model using the same process as gbm.  It uses gradient descent.  It starts off with a random set for the trees, calculates the residuals and subtracts those from the model and uses the differences to identify the observations with the highest errors.  It can make changes, within the set parameters (e.g., learning rate interaction-depth), to the trees improve the model in the direction (e.g., negative, positive) of the gradient (i.e., the difference in the improvement in the loss function between the models).
 
-It uses gradient descent where you make some alterations to the tree set by the learning rate.  The model selects the tree that maximizes.  You alter the decision my making changes that will results in a directional (i.e., positive or negative depending on gradiant).  The model makes the changes so that tree depth.  .  The proposed changes are weighted by the shirkage factor (often to .1) which reduces the changes.    
 
-First get the residuals for the tree model.  Then we get the next model by taking the difference between the residuals and actual observations.  Those with higher values are weighted more  Then we add the residuals to the next tree model placing an emphasis on getting the largest residuals models accurate.  
 
 For bagging models like random forests, they use bootstrapping.  Bootstraping in this context means taking a random sample of participants from the population (smaller than the population) with replacement many times and creating almost identical sample distributions.  Then we run the model on each of these bootstrapped samples and take the average across the cross validation samples.  Bagging maximizes reductions in variance whereas boosting maximizes reductions in bias.
 
@@ -184,7 +182,7 @@ https://towardsdatascience.com/ensemble-methods-bagging-boosting-and-stacking-c9
 https://machinelearningmastery.com/tune-learning-rate-for-gradient-boosting-with-xgboost-in-python/
 http://uc-r.github.io/gbm_regression
 
-Some explaination for the output from the models
+Some explanation for the output from the models
 interaction.depth: level of interactions between the variables (i.e., two-way interactions, three-way interactions)
 n.trees = number of interactions and or splits in the variables (e.g., splitting an ordinal variable)
 
@@ -196,18 +194,41 @@ shrinkage = The learning rate at which the model can change (default set to .1)
 n.minobsinnode = The minimum number of observations in any terminal (final) node from the tree.
 ```{r}
 set.seed(825)
-gbmFit_x_house_out = list()
+library(xgboost)
+gbmFit_house_out = list()
 for(i in 1:length(train_out)){
 gbmFit_house_out[[i]] = train(Housing.y ~ ., data = train_out[[i]], 
-                 method = "xgbTree", 
+                 method = "gbm", 
                  trControl = fitControl,
-                 verbose = FALSE)
+                 verbose = TRUE)
 }
 gbmFit_house_out[[1]]
 plot(gbmFit_house_out[[1]])
 
 
+
 ```
+Aggregate the results
+```{r}
+ac_out = list()
+kappa_out = list()
+for(i in 1:length(gbmFit_house_out)){
+  ac_out[[i]] = gbmFit_house_out[[i]]$results[5]
+  kappa_out[[i]] = gbmFit_house_out[[i]]$results[6]
+}
+ac_out = data.frame(ac_out)
+ac_out = apply(ac_out, 1, mean)
+ac_out
+kappa_out = data.frame(kappa_out)
+kappa_out = apply(kappa_out, 1, mean)
+
+ac_kappa_out = data.frame(ac_out, kappa_out)
+ac_kappa_out = round(ac_kappa_out, 2)
+ac_kappa_out = data.frame(gbmFit_house_out[[1]]$results[1:4], ac_kappa_out)
+ac_kappa_out
+```
+
+
 Then evaluate the model fit.  We get the predicted values from the gbm model with the testing data.  To see what the probability.
 https://cran.r-project.org/web/packages/caretEnsemble/vignettes/caretEnsemble-intro.html#:~:text=caretEnsemble%20has%203%20primary%20functions,such%20lists%20of%20caret%20models.
 ```{r}
