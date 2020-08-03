@@ -140,6 +140,7 @@ head(impute_dat_noms_out[[1]])
 
 Next, we need to create the training and testing data sets.  The createDataPartition function allows us to randomly select a set percentage of the data to go into the training or testing data sets.  We selected 75% of the data for the training and the remaining 25% in the testing data set.  
 ```{r}
+library(caret)
 train_out = list()
 test_out = list()
 train_test_index = list()
@@ -150,6 +151,12 @@ for(i in 1:length(impute_dat_noms_out)){
   test_out[[i]] = impute_dat_noms_out[[i]][-train_test_index[[i]],]
 }
 
+
+  train_test_index =  createDataPartition(impute_dat_noms_out[[i]][[46]], p = .75,list = FALSE, times = 1)
+  train_out[[i]] = impute_dat_noms_out[[i]][train_test_index[[i]],]
+  test_out[[i]] = impute_dat_noms_out[[i]][-train_test_index[[i]],]
+
+
 ```
 Then we set the train control settings.  In this setting we conducted a repeated cross-validation where we create 10 cross validation data sets and repeat this process 10 times.  This helps prevent overfitting the data.
 ```{r}
@@ -159,43 +166,44 @@ fitControl <- trainControl(## 10-fold CV
                            ## repeated ten times
                            repeats = 10)
 
-
-
-300/5
 ```
-adaboost: This is a boosting model, which means it identifies weak (i.e., lower levels of interaction depth) models iteratively and makes adjustments based on the results (i.e., some loss function).  It identifies which observations it is failing to predict accurately and attempts to adjust the model and updates the weights for each observations (weights must sum to one).  Then when the model (e.g., coefficients, interaction depth) are being updated the weights for the observations that are most inaccurate play a larger role.  We then continue this process until some difference between the loss functions is below some specified threshold. 
+adaboost: This is a boosting model, which means it identifies weak (i.e., smaller trees) base (i.e., decision trees, linear regression) models interatively and makes adjustments based on the results (i.e., some loss function).  It identifies which observations it is failing to predict accurately and attempts to adjust the model and updates the weights for each observations (weights must sum to one).  Then when the decision trees (i.e., cuts in the variables and interactions between them) are being updated the weights for the observations that are most inaccurate play a larger role.  We then continue this process until some difference between the loss functions is below some specified threshold. 
 
-gbm: Another boosting technique, but instead of updating weights and training on those, it uses pseudo-residuals to identify the most problematic observations and updates the model using the same process as gbm  
+gbm: Another boosting technique, but instead of updating weights and training on those, it uses pseudo-residuals to identify the most problematic observations and updates the model using the same process as gbm.  It uses gradient descent.  It starts off with a random set for the trees, calculates the residuals and subtracts those from the model and uses the differences to identify the observations with the highest errors.  It can make changes, within the set parameters (e.g., learning rate interaction-depth), to the trees improve the model in the direction (e.g., negative, positive) and within the learning rate
+
+It uses gradient descent where you make some alterations to the tree set by the learning rate.  The model selects the tree that maximizes.  You alter the decision my making changes that will results in a directional (i.e., positive or negative depending on gradiant).  The model makes the changes so that tree depth.  .  The proposed changes are weighted by the shirkage factor (often to .1) which reduces the changes.    
+
+First get the residuals for the tree model.  Then we get the next model by taking the difference between the residuals and actual observations.  Those with higher values are weighted more  Then we add the residuals to the next tree model placing an emphasis on getting the largest residuals models accurate.  
 
 For bagging models like random forests, they use bootstrapping.  Bootstraping in this context means taking a random sample of participants from the population (smaller than the population) with replacement many times and creating almost identical sample distributions.  Then we run the model on each of these bootstrapped samples and take the average across the cross validation samples.  Bagging maximizes reductions in variance whereas boosting maximizes reductions in bias.
 
 
+
 Here are some good sources for explaining the differences: https://towardsdatascience.com/an-intro-to-ensemble-learning-in-machine-learning-5ed8792af72d
 https://towardsdatascience.com/ensemble-methods-bagging-boosting-and-stacking-c9214a10a205
-
+https://machinelearningmastery.com/tune-learning-rate-for-gradient-boosting-with-xgboost-in-python/
+http://uc-r.github.io/gbm_regression
 
 Some explaination for the output from the models
 interaction.depth: level of interactions between the variables (i.e., two-way interactions, three-way interactions)
-n.trees
+n.trees = number of interactions and or splits in the variables (e.g., splitting an ordinal variable)
 
 Now run the model
 Within each of the sets of 10 cross validations, we tak
 
 
-shrinkage
-n.minobsinnode
+shrinkage = The learning rate at which the model can change (default set to .1)
+n.minobsinnode = The minimum number of observations in any terminal (final) node from the tree.
 ```{r}
 set.seed(825)
-gbmFit_house_out = list()
+gbmFit_x_house_out = list()
 for(i in 1:length(train_out)){
 gbmFit_house_out[[i]] = train(Housing.y ~ ., data = train_out[[i]], 
-                 method = "gbm", 
+                 method = "xgbTree", 
                  trControl = fitControl,
-                 ## This last option is actually one
-                 ## for gbm() that passes through
                  verbose = FALSE)
 }
-gbmFit_house_out
+gbmFit_house_out[[1]]
 plot(gbmFit_house_out[[1]])
 
 
@@ -203,10 +211,10 @@ plot(gbmFit_house_out[[1]])
 Then evaluate the model fit.  We get the predicted values from the gbm model with the testing data.  To see what the probability.
 https://cran.r-project.org/web/packages/caretEnsemble/vignettes/caretEnsemble-intro.html#:~:text=caretEnsemble%20has%203%20primary%20functions,such%20lists%20of%20caret%20models.
 ```{r}
-plsProbs <- predict(gbmFit_house, newdata = testing, type = "prob")
-plsClasses <- predict(gbmFit_house, newdata = testing)
+plsProbs <- predict(gbmFit_house_out[[1]], newdata = test_out[[1]], type = "prob")
+plsClasses <- predict(gbmFit_house_out[[1]], newdata = test_out[[1]])
 
-confusionMatrix(data = plsClasses, reference = testing$Housing.y)
+confusionMatrix(data = plsClasses, reference = test_out[[1]][[46]])
 ```
 We can also use the ensample method
 'rpart', 'glm', 'knn' 'adaboost'
