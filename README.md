@@ -36,9 +36,15 @@ machine_dat$SexualIdentity.x = NULL
 ### Change gender to male or female / another gender identity
 machine_dat$Gender.x = ifelse(machine_dat$Gender.x == 1,1,0)
 
+#### Employment 
+describe.factor(machine_dat$Employment.x)
+machine_dat$Employment.x = ifelse(machine_dat$Employment.x <3,1,0)
+
 #Housing.x and y 1 = OWNED OR RENTED HOUSE, APARTMENT, TRAILER, ROOM
 machine_dat$Housing.x = ifelse(machine_dat$Housing.x == 1, 1,0)
 machine_dat$Housing.y = ifelse(machine_dat$Housing.y == 1, 1,0)
+#1= EMPLOYED FULL TIME (35+ HOURS PER WEEK, OR WOULD HAVE BEEN)
+#2 = EMPLOYED PART TIME
 
 
 
@@ -98,10 +104,12 @@ Next, we are evaluating the missing data using the Amelia package with five impu
 ```{r}
 library(Amelia)
 library(prettyR)
+machine_dat
 
-#a.out_noms = amelia(x = machine_dat, m = 5, noms = c("Gender.x", "RaceWhite.x", "RaceBlack.x", "Housing.x", "telehealth.x", "Housing.y", "anxiety", "mdd_r", "mdd_s", "another_sex_ident"), ords = c("Quarter.x", "Agegroup.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "ViolenceTrauma.x", "EnoughMoneyForNeeds.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x"), logs = c("drug_use" ,"er_hos_use_base", "jail_arrest_base"))
+#a.out_noms = amelia(x = machine_dat, m = 5, noms = c("Gender.x", "RaceWhite.x", "RaceBlack.x", "Employment.x", "Housing.x", "telehealth.x", "Housing.y", "anxiety", "mdd_r", "mdd_s", "another_sex_ident"), ords = c("Quarter.x", "Agegroup.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "ViolenceTrauma.x", "Education.x", "EnoughMoneyForNeeds.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x"), logs = c("drug_use" ,"er_hos_use_base", "jail_arrest_base"))
 
 #saveRDS(a.out_noms, file = "a.out_noms.rds")
+setwd("T:/CRI_Research/telehealth_evaluation/data_codebooks")
 a.out_noms = readRDS(file = "a.out_noms.rds")
 impute_dat_noms = a.out_noms$imputations
 ```
@@ -117,32 +125,33 @@ compare.density(a.out_noms, var = "Housing.y")
 test_dat = impute_dat_noms$imp1
 ```
 Now, because we have five data sets, we need to conduct all the remaining analyses five times. 
-First, we need to make sure R is treating each variable as correct variable type (e.g., factor, numeric).  Therefore, we use the apply function on the factor (i.e., binary)
+First, we need to make sure R is treating each factor variable as the correct variable type.  Therefore, we used the apply function on the factor (i.e., binary) variables to ensure they are treated as factors.
 ```{r}
-impute_dat_noms$imp1
-
-impute_dat_noms$imp1[,-c(2:30, 33:39)] = apply(test_dat[,-c(1,5:30, 33:42, 49)], 2, function(x){as.factor(x)})
-
-test_dat[,c(1,5:30, 33:42, 49)] = apply(test_dat[,c(1,5:30, 33:42, 49)], 2, function(x){as.numeric(x)})
-
-### Create separate data sets to you don't have to write every variable out
-test_dat_Housing.y = test_dat 
-test_dat_Housing.y$Housing.y = as.factor(test_dat_Housing.y$Housing.y)
-
+impute_dat_noms_out_bin = list()
+impute_dat_noms_out_num = list()
+impute_dat_noms_out = list()
+for(i in 1:length(impute_dat_noms)){
+  impute_dat_noms_out_bin[[i]]= apply(impute_dat_noms[[i]][,c(2:4, 32, 34, 42:47)], 2, function(x){as.factor(x)})
+impute_dat_noms_out[[i]] = data.frame(impute_dat_noms[[i]][,-c(2:4, 32, 34, 42:47)], impute_dat_noms_out_bin[[i]]) 
+}
+head(impute_dat_noms_out[[1]])
 
 ```
 
-
-Next we create a testing and training data set.  We take 75% of the data for training and 25% for testing.  
+Next, we need to create the training and testing data sets.  The createDataPartition function allows us to randomly select a set percentage of the data to go into the training or testing data sets.  We selected 75% of the data for the training and the remaining 25% in the testing data set.  
 ```{r}
-test_dat_house_index =  createDataPartition(test_dat_Housing.y$Housing.y, p = .75,list = FALSE, times = 1)
-train = test_dat_Housing.y[test_dat_house_index,]
-testing = test_dat_Housing.y[-test_dat_house_index,]
+train_out = list()
+test_out = list()
+train_test_index = list()
+
+for(i in 1:length(impute_dat_noms_out)){
+  train_test_index[[i]] =  createDataPartition(impute_dat_noms_out[[i]][[46]], p = .75,list = FALSE, times = 1)
+  train_out[[i]] = impute_dat_noms_out[[i]][train_test_index[[i]],]
+  test_out[[i]] = impute_dat_noms_out[[i]][-train_test_index[[i]],]
+}
 
 ```
-Then we set the train control settings.  In this setting we conducted a repeated cross-validation where we create 10 cross validation data sets and repeat this process 10 times.
-
-When we 
+Then we set the train control settings.  In this setting we conducted a repeated cross-validation where we create 10 cross validation data sets and repeat this process 10 times.  This helps prevent overfitting the data.
 ```{r}
 fitControl <- trainControl(## 10-fold CV
                            method = "repeatedcv",
@@ -150,25 +159,44 @@ fitControl <- trainControl(## 10-fold CV
                            ## repeated ten times
                            repeats = 10)
 
+
+
+300/5
+```
+Now run the model
+Within each of the sets of 10 cross validations, we tak
+interaction.depth
+n.trees
+shrinkage
+n.minobsinnode
+```{r}
 set.seed(825)
-gbmFit_house <- train(Housing.y ~ ., data = train, 
-                 method = "gbm", 
+gbmFit_house_out = list()
+for(i in 1:length(train_out)){
+gbmFit_house_out[[i]] = train(Housing.y ~ ., data = train_out[[i]], 
+                 method = "adaboost", 
                  trControl = fitControl,
                  ## This last option is actually one
                  ## for gbm() that passes through
                  verbose = FALSE)
+}
+gbmFit_house_out
+plot(gbmFit_house_out[[1]])
 
-summary(gbmFit_house)
 
-300/5
 ```
 Then evaluate the model fit.  We get the predicted values from the gbm model with the testing data.  To see what the probability.
-
+https://cran.r-project.org/web/packages/caretEnsemble/vignettes/caretEnsemble-intro.html#:~:text=caretEnsemble%20has%203%20primary%20functions,such%20lists%20of%20caret%20models.
 ```{r}
 plsProbs <- predict(gbmFit_house, newdata = testing, type = "prob")
 plsClasses <- predict(gbmFit_house, newdata = testing)
 
 confusionMatrix(data = plsClasses, reference = testing$Housing.y)
+```
+We can also use the ensample method
+'rpart', 'glm', 'knn' 'adaboost'
+```{r}
+library(caretEnsemble)
 ```
 
 
