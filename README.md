@@ -163,10 +163,25 @@ fitControl <- trainControl(## 10-fold CV
 
 300/5
 ```
+adaboost: This is a boosting model, which means it identifies weak (i.e., lower levels of interaction depth) models iteratively and makes adjustments based on the results (i.e., some loss function).  It identifies which observations it is failing to predict accurately and attempts to adjust the model and updates the weights for each observations (weights must sum to one).  Then when the model (e.g., coefficients, interaction depth) are being updated the weights for the observations that are most inaccurate play a larger role.  We then continue this process until some difference between the loss functions is below some specified threshold. 
+
+gbm: Another boosting technique, but instead of updating weights and training on those, it uses pseudo-residuals to identify the most problematic observations and updates the model using the same process as gbm  
+
+For bagging models like random forests, they use bootstrapping.  Bootstraping in this context means taking a random sample of participants from the population (smaller than the population) with replacement many times and creating almost identical sample distributions.  Then we run the model on each of these bootstrapped samples and take the average across the cross validation samples.  Bagging maximizes reductions in variance whereas boosting maximizes reductions in bias.
+
+
+Here are some good sources for explaining the differences: https://towardsdatascience.com/an-intro-to-ensemble-learning-in-machine-learning-5ed8792af72d
+https://towardsdatascience.com/ensemble-methods-bagging-boosting-and-stacking-c9214a10a205
+
+
+Some explaination for the output from the models
+interaction.depth: level of interactions between the variables (i.e., two-way interactions, three-way interactions)
+n.trees
+
 Now run the model
 Within each of the sets of 10 cross validations, we tak
-interaction.depth
-n.trees
+
+
 shrinkage
 n.minobsinnode
 ```{r}
@@ -174,7 +189,7 @@ set.seed(825)
 gbmFit_house_out = list()
 for(i in 1:length(train_out)){
 gbmFit_house_out[[i]] = train(Housing.y ~ ., data = train_out[[i]], 
-                 method = "adaboost", 
+                 method = "gbm", 
                  trControl = fitControl,
                  ## This last option is actually one
                  ## for gbm() that passes through
