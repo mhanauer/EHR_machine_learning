@@ -268,9 +268,7 @@ for(i in 1:length(gbmFit_house_out)){
   plsProbs_list[[i]] = predict(gbmFit_house_out[[i]], newdata = test_out[[i]], type = "prob")
   plsProbs_list_zero[[i]] = plsProbs_list[[i]][[1]]
   plsProbs_list_one[[i]] = plsProbs_list[[i]][[2]]
-  
 }
-
 
 plsProbs <- predict(gbmFit_house_out[[1]], newdata = test_out[[1]], type = "prob")
 plsClasses <- predict(gbmFit_house_out[[1]], newdata = test_out[[1]])
@@ -280,9 +278,21 @@ test  = confusionMatrix(data = plsClasses, reference = as.factor(test_out[[1]][[
 test$byClass
 
 ```
-Although, the model is not as accurate as we would like, in theory we could evaluate the probability of being housed and create thresholds.  For example, anyone below 75% is mild risk, below 50% is moderate risk, and below 25% is high risk 
+Although, the model is not as accurate as we would like, in theory we could evaluate the probability of being housed and create thresholds. For example, anyone below 75% is mild risk, below 50% is moderate risk, and below 25% is high risk.  Everyone above .75 would be considered minimal to no risk. 
 ```{r}
+library(dplyr)
+plsProbs_list_one = data.frame(plsProbs_list_one)
+plsProbs_list_one = apply(plsProbs_list_one, 1, mean)
+plsProbs_list_one = round(plsProbs_list_one,2)
 
+plsProbs_list_one = data.frame(id = c(1:length(plsProbs_list_one)), prob_housed = plsProbs_list_one)
+
+plsProbs_list_one$risk_level = case_when(
+  plsProbs_list_one$prob_housed < .25 ~ "high",
+  plsProbs_list_one$prob_housed < .5 ~ "moderate",
+  plsProbs_list_one$prob_housed < .75 ~ "mild",
+  TRUE ~ "minimal to none")
+plsProbs_list_one
 ```
 
 
