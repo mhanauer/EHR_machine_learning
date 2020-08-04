@@ -90,7 +90,6 @@ hig_corr = findCorrelation(descCor)
 hig_corr
 library(car)
 vif_model = glm(Housing.y ~ ., data = machine_dat)
-summary(vif_model)
 vif_list =  vif(vif_model)
 vif_list = data.frame(vif_list) 
 vif_list = subset(vif_list, vif_list > 5)
@@ -155,8 +154,7 @@ fitControl <- trainControl(## 10-fold CV
                            method = "repeatedcv",
                            number = 10,
                            ## repeated ten times
-                           repeats = 10, 
-                           seeds = seeds)
+                           repeats = 10)
 
 ```
 Here I discuss a few models for machine learning.  These explanations are generally from the following sources: 
@@ -183,10 +181,6 @@ n.minobsinnode = The minimum number of observations in any terminal (final) node
 kappa: It is the agreement between models accounting for random chance.
 
 expand.grid: Although, we chose against this (we ran it and found similar results), if you wanted to expand the grid search of parameters, you could use the expand.grid function.
-
-
-
-
 ```{r}
 set.seed(825)
 
@@ -202,10 +196,10 @@ gbmFit_house_out[[i]] = train(Housing.y ~ ., data = train_out[[i]],
                  trControl = fitControl,
                  verbose = FALSE)
 }
-gbmFit_house_out
+gbmFit_house_out[[1]]
 ```
 We can review some of the results by looking at the most influence variables and plotting accuracy across level of interactions and depth of tree.  To do this we took the average influence across the top ten influencenial variable across all five data sets.
-```{r}
+```{r include=FALSE}
 ### Get the average influence from each variable
 dat_rel_inf = list()
 var_list = list()
@@ -215,12 +209,14 @@ for(i in 1:length(gbmFit_house_out)){
   dat_rel_inf[[i]] = dat_rel_inf[[i]][order(dat_rel_inf[[i]]$var),]
   rel_inf[[i]] = dat_rel_inf[[i]]$rel.inf
 }
+
+```
+Plotting the results
+```{r}
 rel_inf = data.frame(rel_inf)
 rel_inf = apply(rel_inf, 1, mean)
 rel_inf = round(rel_inf, 2)
-rel_inf
 dat_rel_inf = data.frame(var = dat_rel_inf[[1]]$var, rel_inf)
-dat_rel_inf
 ### Order by name so you can average them
 
 #### Get the top ten and order 
@@ -232,6 +228,8 @@ plot_rel_inf = ggplot(dat_rel_inf, aes(x =  rel_inf,y =var,))+
   labs(title="Plot of variable relative influence", y = "Variable", x = "Relative influence")
 plot_rel_inf
 ```
+
+
 Then we took the average of the accuracy and kappa's across all five data sets for each set of parameters.
 ```{r}
 ac_out = list()
@@ -242,22 +240,16 @@ for(i in 1:length(gbmFit_house_out)){
 }
 ac_out = data.frame(ac_out)
 ac_out = apply(ac_out, 1, mean)
-ac_out
 kappa_out = data.frame(kappa_out)
 kappa_out = apply(kappa_out, 1, mean)
-
 ac_kappa_out = data.frame(ac_out, kappa_out)
 ac_kappa_out = round(ac_kappa_out, 2)
 ac_kappa_out = data.frame(gbmFit_house_out[[1]]$results[1:4], ac_kappa_out)
 ac_kappa_out
 ```
-
-
-Then evaluate the model fit.  
-We get the predicted values from the gbm model with the testing data to see what the probability of selecting into housing is.
+Next we evaluated the model on new (i.e., the test) data set and review common measures such as accuracy, sensitivity, and specificity.  Overall, the model is not as sensitive as we would like.
 ```{r}
 plsProbs_list = list()
-plsProbs_list_zero = list()
 plsProbs_list_one = list()
 plsClasses = list()
 con_matrix = list()
@@ -266,19 +258,30 @@ accuracy_list = list()
 
 for(i in 1:length(gbmFit_house_out)){
   plsProbs_list[[i]] = predict(gbmFit_house_out[[i]], newdata = test_out[[i]], type = "prob")
-  plsProbs_list_zero[[i]] = plsProbs_list[[i]][[1]]
   plsProbs_list_one[[i]] = plsProbs_list[[i]][[2]]
+  plsClasses[[i]] = predict(gbmFit_house_out[[i]], newdata = test_out[[i]])
+  con_matrix[[i]] = confusionMatrix(data = plsClasses[[i]], reference = as.factor(test_out[[i]][[46]]))
+  class_list[[i]] = con_matrix[[i]]$byClass
+  accuracy_list[[i]] = con_matrix[[i]]$overall[1]
 }
+test = unlist(class_list)
+test = matrix(test, ncol = 11, byrow = TRUE)
+measure = data.frame(class_list[[1]])
+measure = row.names(measure)
+value = round(apply(test, 2, mean),2)
+value = data.frame(measure, value) 
 
-plsProbs <- predict(gbmFit_house_out[[1]], newdata = test_out[[1]], type = "prob")
-plsClasses <- predict(gbmFit_house_out[[1]], newdata = test_out[[1]])
-length(plsClasses)
-test  = confusionMatrix(data = plsClasses, reference = as.factor(test_out[[1]][[46]]))
 
-test$byClass
+accuracy_list = data.frame(accuracy_list)
+accuracy_list = round(apply(accuracy_list, 1, mean),2)
+accuracy_list = data.frame(t(data.frame(t(accuracy_list))))
+accuracy_list$measure =  row.names(accuracy_list)
+accuracy_list = data.frame(measure =  accuracy_list$measure, value = accuracy_list$t.data.frame.t.accuracy_list...)
 
+value = rbind(accuracy_list, value)
+value
 ```
-Although, the model is not as accurate as we would like, in theory we could evaluate the probability of being housed and create thresholds. For example, anyone below 75% is mild risk, below 50% is moderate risk, and below 25% is high risk.  Everyone above .75 would be considered minimal to no risk. 
+Although the model is not as accurate as we would like, in theory, we could evaluate the probability of being housed and create thresholds. For example, anyone below 75% is at mild risk, below 50% is at moderate risk, and below 25% is at high risk.  Everyone above 75% would be considered minimal to no risk. 
 ```{r}
 library(dplyr)
 plsProbs_list_one = data.frame(plsProbs_list_one)
