@@ -133,7 +133,17 @@ for(i in 1:length(impute_dat_noms)){
 impute_dat_noms_out[[i]] = data.frame(impute_dat_noms[[i]][,-c(2:4, 32, 34, 42:47)], impute_dat_noms_out_bin[[i]]) 
 }
 head(impute_dat_noms_out[[1]])
+impute_dat_noms_out[[1]]
+impute_dat_noms_out[[1]][-c(2101),]
 
+### Remove the last person so that you can have a divisible number
+impute_dat_noms_out_remove = list()
+for(i in 1:length(impute_dat_noms_out)){
+  impute_dat_noms_out_remove[[i]] = impute_dat_noms_out[[i]][-c(2101),]
+}
+
+impute_dat_noms_out = impute_dat_noms_out_remove
+impute_dat_noms_out[[1]]
 ```
 
 Next, we need to create the training and testing data sets.  The createDataPartition function allows us to randomly select a set percentage of the data to go into the training or testing data sets.  We selected 75% of the data for the training and the remaining 25% in the testing data set.  
@@ -148,9 +158,10 @@ for(i in 1:length(impute_dat_noms_out)){
   train_out[[i]] = impute_dat_noms_out[[i]][train_test_index[[i]],]
   test_out[[i]] = impute_dat_noms_out[[i]][-train_test_index[[i]],]
 }
-head(train_out[[1]])
-head(test_out[[1]])
 
+train_out[[5]]
+2100*.75
+train_out[[1]]
 
 ```
 Then we set the train control settings.  In this setting we conducted a repeated cross-validation where we create 10 cross validation data sets and repeat this process 10 times.  This helps prevent over fitting the data.
@@ -190,17 +201,18 @@ expand.grid: Although, we chose against this (we ran it and found similar result
 ```{r}
 set.seed(825)
 
-#gbmGrid <-  expand.grid(interaction.depth = c(1, 2, 3), 
-                        #n.trees = (1:30)*10, 
-                        #shrinkage = 0.1,
-                        #n.minobsinnode = 20)
+gbmGrid <-  expand.grid(interaction.depth = c(1, 2, 3), 
+                        n.trees = (1:30)*10, 
+                        shrinkage = 0.1,
+                        n.minobsinnode = 20)
 
 gbmFit_house_out = list()
 for(i in 1:length(train_out)){
 gbmFit_house_out[[i]] = train(Housing.y ~ ., data = train_out[[i]], 
                  method = "gbm", 
                  trControl = fitControl,
-                 verbose = FALSE)
+                 verbose = FALSE, 
+                 tuneGrid = gbmGrid)
 }
 gbmFit_house_out[[1]]
 ```
@@ -270,13 +282,10 @@ for(i in 1:length(gbmFit_house_out)){
   class_list[[i]] = con_matrix[[i]]$byClass
   accuracy_list[[i]] = con_matrix[[i]]$overall[1]
 }
-test = unlist(class_list)
-test = matrix(test, ncol = 11, byrow = TRUE)
 measure = data.frame(class_list[[1]])
 measure = row.names(measure)
 value = round(apply(test, 2, mean),2)
 value = data.frame(measure, value) 
-
 
 accuracy_list = data.frame(accuracy_list)
 accuracy_list = round(apply(accuracy_list, 1, mean),2)
@@ -288,20 +297,19 @@ value = rbind(accuracy_list, value)
 value
 ```
 Although the model is not as accurate as we would like, in theory, we could evaluate the probability of being housed and create thresholds. For example, anyone below 75% is at mild risk, below 50% is at moderate risk, and below 25% is at high risk.  Everyone above 75% would be considered minimal to no risk. 
+
+Because I am just showing this part for demonstration, I will only use one data set.
 ```{r}
 library(dplyr)
-plsProbs_list_one = data.frame(plsProbs_list_one)
-plsProbs_list_one = apply(plsProbs_list_one, 1, mean)
-plsProbs_list_one = round(plsProbs_list_one,2)
-
-plsProbs_list_one = data.frame(id = c(1:length(plsProbs_list_one)), prob_housed = plsProbs_list_one)
+plsProbs_list_one = plsProbs_list_one[[1]]
+plsProbs_list_one = data.frame(prob_housed = plsProbs_list_one)
 
 plsProbs_list_one$risk_level = case_when(
   plsProbs_list_one$prob_housed < .25 ~ "high",
   plsProbs_list_one$prob_housed < .5 ~ "moderate",
   plsProbs_list_one$prob_housed < .75 ~ "mild",
   TRUE ~ "minimal to none")
-plsProbs_list_one
+describe.factor(plsProbs_list_one$risk_level)
 ```
 
 
