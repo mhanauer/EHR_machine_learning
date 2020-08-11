@@ -109,9 +109,9 @@ Next, we are evaluating the missing data using the Amelia package with five impu
 library(Amelia)
 library(prettyR)
 
-a.out_noms = amelia(x = machine_dat, m = 5, noms = c("Gender.x", "RaceWhite.x", "RaceBlack.x", "Employment.x", "Housing.x", "telehealth.x", "Housing.y", "anxiety", "mdd_r", "mdd_s", "another_sex_ident"), ords = c("Quarter.x", "Agegroup.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "ViolenceTrauma.x", "Education.x", "EnoughMoneyForNeeds.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x"), logs = c("drug_use" ,"er_hos_use_base", "jail_arrest_base"))
+#a.out_noms = amelia(x = machine_dat, m = 5, noms = c("Gender.x", "RaceWhite.x", "RaceBlack.x", "Employment.x", "Housing.x", "telehealth.x", "Housing.y", "anxiety", "mdd_r", "mdd_s", "another_sex_ident"), ords = c("Quarter.x", "Agegroup.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "ViolenceTrauma.x", "Education.x", "EnoughMoneyForNeeds.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x"), logs = c("drug_use" ,"er_hos_use_base", "jail_arrest_base"))
 
-saveRDS(a.out_noms, file = "a.out_noms_8_20_20.rds")
+#saveRDS(a.out_noms, file = "a.out_noms_8_20_20.rds")
 setwd("T:/CRI_Research/telehealth_evaluation/data_codebooks")
 a.out_noms = readRDS(file = "a.out_noms_8_20_20.rds")
 impute_dat_noms = a.out_noms$imputations
@@ -133,17 +133,7 @@ for(i in 1:length(impute_dat_noms)){
 impute_dat_noms_out[[i]] = data.frame(impute_dat_noms[[i]][,-c(2:4, 32, 34, 42:47)], impute_dat_noms_out_bin[[i]]) 
 }
 head(impute_dat_noms_out[[1]])
-impute_dat_noms_out[[1]]
-impute_dat_noms_out[[1]][-c(2101),]
 
-### Remove the last person so that you can have a divisible number
-impute_dat_noms_out_remove = list()
-for(i in 1:length(impute_dat_noms_out)){
-  impute_dat_noms_out_remove[[i]] = impute_dat_noms_out[[i]][-c(2101),]
-}
-
-impute_dat_noms_out = impute_dat_noms_out_remove
-impute_dat_noms_out[[1]]
 ```
 
 Next, we need to create the training and testing data sets.  The createDataPartition function allows us to randomly select a set percentage of the data to go into the training or testing data sets.  We selected 75% of the data for the training and the remaining 25% in the testing data set.  
@@ -158,10 +148,6 @@ for(i in 1:length(impute_dat_noms_out)){
   train_out[[i]] = impute_dat_noms_out[[i]][train_test_index[[i]],]
   test_out[[i]] = impute_dat_noms_out[[i]][-train_test_index[[i]],]
 }
-
-train_out[[5]]
-2100*.75
-train_out[[1]]
 
 ```
 Then we set the train control settings.  In this setting we conducted a repeated cross-validation where we create 10 cross validation data sets and repeat this process 10 times.  This helps prevent over fitting the data.
@@ -201,8 +187,8 @@ expand.grid: Although, we chose against this (we ran it and found similar result
 ```{r}
 set.seed(825)
 
-gbmGrid <-  expand.grid(interaction.depth = c(1, 2, 3), 
-                        n.trees = (1:30)*10, 
+gbmGrid <-  expand.grid(interaction.depth = c(3:5), 
+                        n.trees = (20:30)*10, 
                         shrinkage = 0.1,
                         n.minobsinnode = 20)
 
@@ -215,6 +201,10 @@ gbmFit_house_out[[i]] = train(Housing.y ~ ., data = train_out[[i]],
                  tuneGrid = gbmGrid)
 }
 gbmFit_house_out[[1]]
+setwd("T:/CRI_Research/telehealth_evaluation/data_codebooks")
+saveRDS(gbmFit_house_out, file = "gbmFit_house_out.rds")
+gbmFit_house_out = readRDS(file = "gbmFit_house_out.rds")
+
 ```
 We can review some of the results by looking at the most influence variables and plotting accuracy across level of interactions and depth of tree.  To do this we took the average influence across the top ten influencenial variable across all five data sets.
 ```{r include=FALSE}
@@ -282,10 +272,9 @@ for(i in 1:length(gbmFit_house_out)){
   class_list[[i]] = con_matrix[[i]]$byClass
   accuracy_list[[i]] = con_matrix[[i]]$overall[1]
 }
-measure = data.frame(class_list[[1]])
-measure = row.names(measure)
-value = round(apply(test, 2, mean),2)
-value = data.frame(measure, value) 
+value = data.frame(class_list[[1]])
+measure = row.names(value)
+value = data.frame(measure, value = value$class_list..1..) 
 
 accuracy_list = data.frame(accuracy_list)
 accuracy_list = round(apply(accuracy_list, 1, mean),2)
@@ -294,6 +283,7 @@ accuracy_list$measure =  row.names(accuracy_list)
 accuracy_list = data.frame(measure =  accuracy_list$measure, value = accuracy_list$t.data.frame.t.accuracy_list...)
 
 value = rbind(accuracy_list, value)
+value$value = round(value$value,2)
 value
 ```
 Although the model is not as accurate as we would like, in theory, we could evaluate the probability of being housed and create thresholds. For example, anyone below 75% is at mild risk, below 50% is at moderate risk, and below 25% is at high risk.  Everyone above 75% would be considered minimal to no risk. 
