@@ -278,12 +278,11 @@ plsClasses = list()
 con_matrix = list()
 class_list = list()
 accuracy_list = list()
-
 for(i in 1:length(gbmFit_house_out)){
   plsProbs_list[[i]] = predict(gbmFit_house_out[[i]], newdata = test_out[[i]], type = "prob")
   plsProbs_list_one[[i]] = plsProbs_list[[i]][[2]]
   plsClasses[[i]] = predict(gbmFit_house_out[[i]], newdata = test_out[[i]])
-  con_matrix[[i]] = confusionMatrix(data = plsClasses[[i]], reference = as.factor(test_out[[i]][[46]]))
+  con_matrix[[i]] = confusionMatrix(data = plsClasses[[i]], reference = as.factor(test_out[[i]][[47]]))
   class_list[[i]] = con_matrix[[i]]$byClass
   accuracy_list[[i]] = con_matrix[[i]]$overall[1]
 }
