@@ -122,9 +122,9 @@ Next, we are evaluating the missing data using the Amelia package with five impu
 library(Amelia)
 library(prettyR)
 
-a.out_noms = amelia(x = machine_dat, m = 5, noms = c("Gender.x", "RaceWhite.x", "RaceBlack.x", "Employment.x", "Housing.x", "telehealth.x", "Housing.y", "anxiety", "mdd_r", "mdd_s", "another_sex_ident", "grant.x", "EverServed.x", "ActiveDuty_Else.x"), ords = c("Quarter.x", "Agegroup.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "ViolenceTrauma.x", "Education.x", "EnoughMoneyForNeeds.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x"), logs = c("drug_use" ,"er_hos_use_base", "jail_arrest_base", "NightsHomeless.x"))
+#a.out_noms = amelia(x = machine_dat, m = 5, noms = c("Gender.x", "RaceWhite.x", "RaceBlack.x", "Employment.x", "Housing.x", "telehealth.x", "Housing.y", "anxiety", "mdd_r", "mdd_s", "another_sex_ident", "grant.x", "EverServed.x", "ActiveDuty_Else.x"), ords = c("Quarter.x", "Agegroup.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "ViolenceTrauma.x", "Education.x", "EnoughMoneyForNeeds.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x"), logs = c("drug_use" ,"er_hos_use_base", "jail_arrest_base", "NightsHomeless.x"))
 
-saveRDS(a.out_noms, file = "a.out_noms_8_21_20.rds")
+#saveRDS(a.out_noms, file = "a.out_noms_8_21_20.rds")
 setwd("T:/CRI_Research/telehealth_evaluation/data_codebooks")
 a.out_noms = readRDS(file = "a.out_noms_8_21_20.rds")
 impute_dat_noms = a.out_noms$imputations
@@ -136,34 +136,32 @@ compare.density(a.out_noms, var = "RelationshipSatisfaction.x")
 compare.density(a.out_noms, var = "drug_use")
 compare.density(a.out_noms, var = "Housing.y")
 ```
-Now, because we have five data sets, we need to conduct all the remaining analyses five times. 
-First, we need to make sure R is treating each factor variable as the correct variable type.  Therefore, we used the apply function on the factor (i.e., binary) variables to ensure they are treated as factors.
+
+Because the number of rows is different for each data you may need to just take the average and create one data set.  Should be fine, because you are only using the parameter values and not estimating standard errors for the values.  Will reduce looping code.
 ```{r}
-dim(impute_dat_noms[[1]])
-head(impute_dat_noms)
-impute_dat_noms_out_bin = list()
-impute_dat_noms_out = list()
-for(i in 1:length(impute_dat_noms)){
-  impute_dat_noms_out_bin[[i]]= apply(impute_dat_noms[[i]][,c(2:4, 32, 34, 42:46, 48:51)], 2, function(x){as.factor(x)})
-impute_dat_noms_out[[i]] = data.frame(impute_dat_noms[[i]][,-c(2:4, 32, 34, 42:46, 48:51)], impute_dat_noms_out_bin[[i]]) 
-}
-head(impute_dat_noms_out[[1]])
+
+### Sum data frames and then for the binary ones reduce to 0 if total is less 2.5 and 1 if greater and then divide by five for all the quantitative variables
+impute_dat_noms = impute_dat_noms[[1]]+impute_dat_noms[[2]]+impute_dat_noms[[3]]+impute_dat_noms[[4]]+impute_dat_noms[[5]]
+
+impute_dat_noms[,c(2:4, 32, 34, 42:46, 48:51)] = apply(impute_dat_noms[,c(2:4, 32, 34, 42:46, 48:51)], 2, function(x){ifelse(x >= 2.5, 1, 0)})
+
+impute_dat_noms[,c(2:4, 32, 34, 42:46, 48:51)] = apply(impute_dat_noms[,c(2:4, 32, 34, 42:46, 48:51)], 2, function(x){as.factor(x)})
+
+### Now divide each value by five
+impute_dat_noms[,-c(2:4, 32, 34, 42:46, 48:51)] = impute_dat_noms[,-c(2:4, 32, 34, 42:46, 48:51)] / 5
+impute_dat_noms
+
+
 
 ```
 
 Next, we need to create the training and testing data sets.  The createDataPartition function allows us to randomly select a set percentage of the data to go into the training or testing data sets.  We selected 75% of the data for the training and the remaining 25% in the testing data set.  
 ```{r}
 library(caret)
-train_out = list()
-test_out = list()
-train_test_index = list()
-
-for(i in 1:length(impute_dat_noms_out)){
-  train_test_index[[i]] =  createDataPartition(impute_dat_noms_out[[i]][[46]], p = .75,list = FALSE, times = 1)
-  train_out[[i]] = impute_dat_noms_out[[i]][train_test_index[[i]],]
-  test_out[[i]] = impute_dat_noms_out[[i]][-train_test_index[[i]],]
-}
-
+set.seed(123)
+train_test_index =  createDataPartition(impute_dat_noms$Housing.y, p = .75,list = FALSE, times = 1)
+train_out = impute_dat_noms[train_test_index,]
+test_out = impute_dat_noms[-train_test_index,]
 ```
 Then we set the train control settings.  In this setting we conducted a repeated cross-validation where we create 10 cross validation data sets and repeat this process 10 times.  This helps prevent over fitting the data.
 ```{r}
@@ -172,7 +170,8 @@ fitControl <- trainControl(## 10-fold CV
                            method = "repeatedcv",
                            number = 10,
                            ## repeated ten times
-                           repeats = 10)
+                           repeats = 10,
+                           allowParallel = TRUE)
 
 ```
 Here I discuss a few models for machine learning.  These explanations are generally from the following sources: 
@@ -202,25 +201,56 @@ expand.grid: Although, we chose against this (we ran it and found similar result
 ```{r}
 set.seed(825)
 
-gbmGrid <-  expand.grid(interaction.depth = c(3:5), 
+gbmGrid <-  expand.grid(interaction.depth = c(11:13), 
                         n.trees = (20:30)*10, 
                         shrinkage = 0.1,
                         n.minobsinnode = 20)
 
-gbmFit_house_out = list()
-for(i in 1:length(train_out)){
-gbmFit_house_out[[i]] = train(Housing.y ~ ., data = train_out[[i]], 
+gbmFit_house = train(Housing.y ~ ., data = train_out, 
                  method = "gbm", 
                  trControl = fitControl,
                  verbose = FALSE, 
                  tuneGrid = gbmGrid)
-}
-gbmFit_house_out[[1]]
+gbmFit_house_out
 setwd("T:/CRI_Research/telehealth_evaluation/data_codebooks")
 saveRDS(gbmFit_house_out, file = "gbmFit_house_out.rds")
 gbmFit_house_out = readRDS(file = "gbmFit_house_out.rds")
 
 ```
+Try xgboostTree
+Documentation for xgboost: https://github.com/dmlc/xgboost/blob/master/doc/parameter.rst
+```{r}
+set.seed(825)
+#### Try xgboost tree
+xgb_trcontrol = trainControl(
+  method = "repeatedcv",
+  number = 10,  
+  repeats = 10,
+  allowParallel = TRUE,
+  verboseIter = FALSE,
+  returnData = FALSE
+)
+
+xgbGrid <- expand.grid(max_depth = c(10, 15, 20, 25),
+                       eta = 0.01,
+                       min_child_weight = 1,
+                       subsample = .5,
+                       early.stop.round = 3
+                      )
+
+xgbmFit_house_out = list()
+for(i in 1:length(train_out)){
+xgbmFit_house_out[[i]] = train(Housing.y ~ ., data = train_out[[i]], 
+                 method = "xgbTree", 
+                 trControl = fitControl,
+                 verbose = FALSE, 
+                 tuneGrid = gbmGrid)
+}
+gbmFit_house_out[[1]]
+
+```
+
+
 We can review some of the results by looking at the most influence variables and plotting accuracy across level of interactions and depth of tree.  To do this we took the average influence across the top ten influencenial variable across all five data sets.
 ```{r include=FALSE}
 ### Get the average influence from each variable
