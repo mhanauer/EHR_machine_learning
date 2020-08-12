@@ -17,7 +17,10 @@ We then created several binary demographics from nominal variables.  First, we e
 ```{r}
 setwd("T:/CRI_Research/telehealth_evaluation/data_codebooks")
 telehealth_noms_wide_noms = read.csv("telehealth_noms_wide_noms_8_10_20.csv", header = TRUE)
-machine_dat =  telehealth_noms_wide_noms[c("Quarter.x", "DiagnosisOne.x", "Gender.x", "HispanicLatino.x", "RaceWhite.x", "RaceBlack.x", "Agegroup.x", "SexualIdentity.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "SchoolOrWork.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "Cocaine_Use.x", "Meth_Use.x", "RxOpioids_Use.x", "StreetOpioids_Use.x", "ViolenceTrauma.x", "VT_NightmaresThoughts.x", "VT_NotThinkAboutIt.x", "VT_OnGuard.x", "VT_NumbDetached.x", "PhysicallyHurt.x", "NightsHospitalMHC.x", "NightsDetox.x", "NightsJail.x", "TimesER.x", "Housing.x", "LivingConditionsSatisfaction.x", "Education.x", "Employment.x", "EnoughMoneyForNeeds.x", "NumTimesArrested.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x", "telehealth.x", "Housing.y")]
+telehealth_noms_wide_noms
+
+
+machine_dat =  telehealth_noms_wide_noms[c("Quarter.x", "DiagnosisOne.x", "Gender.x", "HispanicLatino.x", "RaceWhite.x", "RaceBlack.x", "Agegroup.x", "SexualIdentity.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "SchoolOrWork.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "Cocaine_Use.x", "Meth_Use.x", "RxOpioids_Use.x", "StreetOpioids_Use.x", "ViolenceTrauma.x", "VT_NightmaresThoughts.x", "VT_NotThinkAboutIt.x", "VT_OnGuard.x", "VT_NumbDetached.x", "PhysicallyHurt.x", "NightsHospitalMHC.x", "NightsDetox.x", "NightsJail.x", "TimesER.x", "Housing.x", "LivingConditionsSatisfaction.x", "Education.x", "Employment.x", "EnoughMoneyForNeeds.x", "NumTimesArrested.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x", "telehealth.x", "Housing.y", "grant.x", "Inhalants_Use.x", "Sedatives_Use.x", "Hallucinogens_Use.x", "Other_Use.x", "Stimulants_Use.x", "EverServed.x", "ActiveDuty_Else.x", "NightsHomeless.x")]
 library(naniar)
 miss_var_summary(machine_dat)
 # Remove variables missing significantly more than 50%
@@ -45,6 +48,9 @@ machine_dat$Housing.y = ifelse(machine_dat$Housing.y == 1, 1,0)
 #1= EMPLOYED FULL TIME (35+ HOURS PER WEEK, OR WOULD HAVE BEEN)
 #2 = EMPLOYED PART TIME
 
+## Add grant.x break into CCBHC or not
+describe.factor(machine_dat$grant.x)
+machine_dat$grant.x = ifelse(machine_dat$grant.x == "IN_IL_KY_CCBHC", 1, 0)
 
 
 ```
@@ -64,12 +70,16 @@ machine_dat$HispanicLatino.x = NULL
 machine_dat$PhysicallyHurt.x = NULL
 
 
-machine_dat$drug_use = machine_dat$Cocaine_Use.x + machine_dat$Meth_Use.x + machine_dat$StreetOpioids_Use.x + machine_dat$RxOpioids_Use.x
+machine_dat$drug_use = machine_dat$Cocaine_Use.x + machine_dat$Meth_Use.x + machine_dat$StreetOpioids_Use.x + machine_dat$RxOpioids_Use.x + machine_dat$Stimulants_Use.x + machine_dat$Inhalants_Use.x + machine_dat$Sedatives_Use.x + machine_dat$Hallucinogens_Use.x + machine_dat$Other_Use.x
 machine_dat$Cocaine_Use.x = NULL
 machine_dat$Meth_Use.x = NULL
 machine_dat$StreetOpioids_Use.x = NULL
 machine_dat$RxOpioids_Use.x = NULL
-
+machine_dat$Inhalants_Use.x = NULL
+machine_dat$Sedatives_Use.x = NULL
+machine_dat$Hallucinogens_Use.x = NULL
+machine_dat$Other_Use.x = NULL
+machine_dat$Stimulants_Use.x = NULL
 
 machine_dat$er_hos_use_base = machine_dat$NightsDetox.x + machine_dat$NightsHospitalMHC.x + machine_dat$TimesER.x
 ### Drop other variables
@@ -79,10 +89,12 @@ machine_dat[,c("NightsDetox.x", "NightsHospitalMHC.x", "TimesER.x")] = list(NULL
 machine_dat$jail_arrest_base = machine_dat$NumTimesArrested.x + machine_dat$NightsJail.x
 machine_dat$NightsJail.x = NULL
 machine_dat$NumTimesArrested.x = NULL
+
 ```
 Descriptives
 ```{r}
 apply(machine_dat, 2, function(x){describe.factor(x)})
+dim(machine_dat)
 ```
 
 
@@ -96,6 +108,7 @@ hig_corr = findCorrelation(descCor)
 hig_corr
 library(car)
 vif_model = glm(Housing.y ~ ., data = machine_dat)
+summary(vif_model)
 vif_list =  vif(vif_model)
 vif_list = data.frame(vif_list) 
 vif_list = subset(vif_list, vif_list > 5)
@@ -109,11 +122,11 @@ Next, we are evaluating the missing data using the Amelia package with five impu
 library(Amelia)
 library(prettyR)
 
-#a.out_noms = amelia(x = machine_dat, m = 5, noms = c("Gender.x", "RaceWhite.x", "RaceBlack.x", "Employment.x", "Housing.x", "telehealth.x", "Housing.y", "anxiety", "mdd_r", "mdd_s", "another_sex_ident"), ords = c("Quarter.x", "Agegroup.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "ViolenceTrauma.x", "Education.x", "EnoughMoneyForNeeds.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x"), logs = c("drug_use" ,"er_hos_use_base", "jail_arrest_base"))
+a.out_noms = amelia(x = machine_dat, m = 5, noms = c("Gender.x", "RaceWhite.x", "RaceBlack.x", "Employment.x", "Housing.x", "telehealth.x", "Housing.y", "anxiety", "mdd_r", "mdd_s", "another_sex_ident", "grant.x", "EverServed.x", "ActiveDuty_Else.x"), ords = c("Quarter.x", "Agegroup.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "ViolenceTrauma.x", "Education.x", "EnoughMoneyForNeeds.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x"), logs = c("drug_use" ,"er_hos_use_base", "jail_arrest_base", "NightsHomeless.x"))
 
-#saveRDS(a.out_noms, file = "a.out_noms_8_20_20.rds")
+saveRDS(a.out_noms, file = "a.out_noms_8_21_20.rds")
 setwd("T:/CRI_Research/telehealth_evaluation/data_codebooks")
-a.out_noms = readRDS(file = "a.out_noms_8_20_20.rds")
+a.out_noms = readRDS(file = "a.out_noms_8_21_20.rds")
 impute_dat_noms = a.out_noms$imputations
 ```
 We also compared the densities of the observed data versus the model imputed.  Overall the distributions match with some imputations having flatter distributions where some variables spike.  However, drug use imputed values are about one unit higher than observed values. 
@@ -126,11 +139,13 @@ compare.density(a.out_noms, var = "Housing.y")
 Now, because we have five data sets, we need to conduct all the remaining analyses five times. 
 First, we need to make sure R is treating each factor variable as the correct variable type.  Therefore, we used the apply function on the factor (i.e., binary) variables to ensure they are treated as factors.
 ```{r}
+dim(impute_dat_noms[[1]])
+head(impute_dat_noms)
 impute_dat_noms_out_bin = list()
 impute_dat_noms_out = list()
 for(i in 1:length(impute_dat_noms)){
-  impute_dat_noms_out_bin[[i]]= apply(impute_dat_noms[[i]][,c(2:4, 32, 34, 42:47)], 2, function(x){as.factor(x)})
-impute_dat_noms_out[[i]] = data.frame(impute_dat_noms[[i]][,-c(2:4, 32, 34, 42:47)], impute_dat_noms_out_bin[[i]]) 
+  impute_dat_noms_out_bin[[i]]= apply(impute_dat_noms[[i]][,c(2:4, 32, 34, 42:46, 48:51)], 2, function(x){as.factor(x)})
+impute_dat_noms_out[[i]] = data.frame(impute_dat_noms[[i]][,-c(2:4, 32, 34, 42:46, 48:51)], impute_dat_noms_out_bin[[i]]) 
 }
 head(impute_dat_noms_out[[1]])
 
