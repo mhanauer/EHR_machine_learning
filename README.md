@@ -17,8 +17,6 @@ We then created several binary demographics from nominal variables.  First, we e
 ```{r}
 setwd("T:/CRI_Research/telehealth_evaluation/data_codebooks")
 telehealth_noms_wide_noms = read.csv("telehealth_noms_wide_noms_8_10_20.csv", header = TRUE)
-telehealth_noms_wide_noms
-
 
 machine_dat =  telehealth_noms_wide_noms[c("Quarter.x", "DiagnosisOne.x", "Gender.x", "HispanicLatino.x", "RaceWhite.x", "RaceBlack.x", "Agegroup.x", "SexualIdentity.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "SchoolOrWork.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "Cocaine_Use.x", "Meth_Use.x", "RxOpioids_Use.x", "StreetOpioids_Use.x", "ViolenceTrauma.x", "VT_NightmaresThoughts.x", "VT_NotThinkAboutIt.x", "VT_OnGuard.x", "VT_NumbDetached.x", "PhysicallyHurt.x", "NightsHospitalMHC.x", "NightsDetox.x", "NightsJail.x", "TimesER.x", "Housing.x", "LivingConditionsSatisfaction.x", "Education.x", "Employment.x", "EnoughMoneyForNeeds.x", "NumTimesArrested.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x", "telehealth.x", "Housing.y", "grant.x", "Inhalants_Use.x", "Sedatives_Use.x", "Hallucinogens_Use.x", "Other_Use.x", "Stimulants_Use.x", "EverServed.x", "ActiveDuty_Else.x", "NightsHomeless.x")]
 library(naniar)
@@ -26,6 +24,7 @@ miss_var_summary(machine_dat)
 # Remove variables missing significantly more than 50%
 machine_dat[,c("VT_NightmaresThoughts.x", "VT_NotThinkAboutIt.x", "VT_OnGuard.x", "VT_NumbDetached.x", "SchoolOrWork.x", "LivingConditionsSatisfaction.x")] = list(NULL)
 
+library(prettyR)
 
 #DiagnosisOne.x 62 = anxiety, 59 = mdd recurrent, 58 mdd single episode
 machine_dat$anxiety = ifelse(machine_dat$DiagnosisOne.x == 62, 1, 0) 
@@ -150,9 +149,15 @@ impute_dat_noms[,c(2:4, 32, 34, 42:46, 48:51)] = apply(impute_dat_noms[,c(2:4, 3
 ### Now divide each value by five
 impute_dat_noms[,-c(2:4, 32, 34, 42:46, 48:51)] = impute_dat_noms[,-c(2:4, 32, 34, 42:46, 48:51)] / 5
 impute_dat_noms
+### Remove the x's
 
+var_names = colnames(impute_dat_noms)
+var_names = gsub(".x","",var_names)
+colnames(impute_dat_noms) = var_names
 
-
+### download housing data for python machine learning
+house_dat_8_13_20  = impute_dat_noms
+write.csv(house_dat_8_13_20, "house_dat_8_13_20.csv", row.names = FALSE)
 ```
 
 Next, we need to create the training and testing data sets.  The createDataPartition function allows us to randomly select a set percentage of the data to go into the training or testing data sets.  We selected 75% of the data for the training and the remaining 25% in the testing data set.  
@@ -211,57 +216,49 @@ gbmFit_house = train(Housing.y ~ ., data = train_out,
                  trControl = fitControl,
                  verbose = FALSE, 
                  tuneGrid = gbmGrid)
-gbmFit_house_out
+gbmFit_house
+
 setwd("T:/CRI_Research/telehealth_evaluation/data_codebooks")
-saveRDS(gbmFit_house_out, file = "gbmFit_house_out.rds")
-gbmFit_house_out = readRDS(file = "gbmFit_house_out.rds")
+saveRDS(gbmFit_house, file = "gbmFit_house.rds")
+gbmFit_house = readRDS(file = "gbmFit_house.rds")
 
 ```
 Try xgboostTree
 Documentation for xgboost: https://github.com/dmlc/xgboost/blob/master/doc/parameter.rst
+https://www.hackerearth.com/practice/machine-learning/machine-learning-algorithms/beginners-tutorial-on-xgboost-parameter-tuning-r/tutorial/
 ```{r}
 set.seed(825)
 #### Try xgboost tree
 xgb_trcontrol = trainControl(
   method = "repeatedcv",
-  number = 10,  
-  repeats = 10,
+  number = 5,  
+  repeats = 5,
   allowParallel = TRUE,
   verboseIter = FALSE,
   returnData = FALSE
 )
 
-xgbGrid <- expand.grid(max_depth = c(10, 15, 20, 25),
-                       eta = 0.01,
+xgbGrid <- expand.grid(nrounds = c(300),
+                       max_depth = c(8:12),
+                       colsample_bytree = c(.9),
+                       eta = c(0.1, .01),
+                       gamma=c(0, .1,),
                        min_child_weight = 1,
-                       subsample = .5,
-                       early.stop.round = 3
+                       subsample = c(1, .5,)
                       )
 
-xgbmFit_house_out = list()
-for(i in 1:length(train_out)){
-xgbmFit_house_out[[i]] = train(Housing.y ~ ., data = train_out[[i]], 
+xgbmFit_house = train(Housing.y ~ ., data = train_out, 
                  method = "xgbTree", 
-                 trControl = fitControl,
-                 verbose = FALSE, 
-                 tuneGrid = gbmGrid)
-}
-gbmFit_house_out[[1]]
-
+                 trControl = xgb_trcontrol,
+                 tuneGrid = xgbGrid,
+                 verbose = FALSE)
 ```
 
 
 We can review some of the results by looking at the most influence variables and plotting accuracy across level of interactions and depth of tree.  To do this we took the average influence across the top ten influencenial variable across all five data sets.
 ```{r include=FALSE}
+library(xgboost)
 ### Get the average influence from each variable
-dat_rel_inf = list()
-var_list = list()
-rel_inf = list()
-for(i in 1:length(gbmFit_house_out)){
-  dat_rel_inf[[i]] =  summary(gbmFit_house_out[[i]])
-  dat_rel_inf[[i]] = dat_rel_inf[[i]][order(dat_rel_inf[[i]]$var),]
-  rel_inf[[i]] = dat_rel_inf[[i]]$rel.inf
-}
 
 ```
 Plotting the results
@@ -282,53 +279,15 @@ plot_rel_inf = ggplot(dat_rel_inf, aes(x =  rel_inf,y =var,))+
 plot_rel_inf
 ```
 
-
-Then we took the average of the accuracy and kappa's across all five data sets for each set of parameters.
-```{r}
-ac_out = list()
-kappa_out = list()
-for(i in 1:length(gbmFit_house_out)){
-  ac_out[[i]] = gbmFit_house_out[[i]]$results[5]
-  kappa_out[[i]] = gbmFit_house_out[[i]]$results[6]
-}
-ac_out = data.frame(ac_out)
-ac_out = apply(ac_out, 1, mean)
-kappa_out = data.frame(kappa_out)
-kappa_out = apply(kappa_out, 1, mean)
-ac_kappa_out = data.frame(ac_out, kappa_out)
-ac_kappa_out = round(ac_kappa_out, 2)
-ac_kappa_out = data.frame(gbmFit_house_out[[1]]$results[1:4], ac_kappa_out)
-ac_kappa_out
-```
 Next we evaluated the model on new (i.e., the test) data set and review common measures such as accuracy, sensitivity, and specificity.  Overall, the model is not as sensitive as we would like.
+https://towardsdatascience.com/decoding-the-confusion-matrix-bb4801decbb
 ```{r}
-plsProbs_list = list()
-plsProbs_list_one = list()
-plsClasses = list()
-con_matrix = list()
-class_list = list()
-accuracy_list = list()
-for(i in 1:length(gbmFit_house_out)){
-  plsProbs_list[[i]] = predict(gbmFit_house_out[[i]], newdata = test_out[[i]], type = "prob")
-  plsProbs_list_one[[i]] = plsProbs_list[[i]][[2]]
-  plsClasses[[i]] = predict(gbmFit_house_out[[i]], newdata = test_out[[i]])
-  con_matrix[[i]] = confusionMatrix(data = plsClasses[[i]], reference = as.factor(test_out[[i]][[47]]))
-  class_list[[i]] = con_matrix[[i]]$byClass
-  accuracy_list[[i]] = con_matrix[[i]]$overall[1]
-}
-value = data.frame(class_list[[1]])
-measure = row.names(value)
-value = data.frame(measure, value = value$class_list..1..) 
-
-accuracy_list = data.frame(accuracy_list)
-accuracy_list = round(apply(accuracy_list, 1, mean),2)
-accuracy_list = data.frame(t(data.frame(t(accuracy_list))))
-accuracy_list$measure =  row.names(accuracy_list)
-accuracy_list = data.frame(measure =  accuracy_list$measure, value = accuracy_list$t.data.frame.t.accuracy_list...)
-
-value = rbind(accuracy_list, value)
-value$value = round(value$value,2)
-value
+library(caret)
+plsProbs =  predict(xgbmFit_house, newdata = test_out, type = "prob")
+plsProbs_list_one = plsProbs[[2]]
+plsClasses = predict(xgbmFit_house, newdata = test_out)
+con_matrix = confusionMatrix(data = plsClasses, reference = as.factor(test_out$Housing.y))
+con_matrix
 ```
 Although the model is not as accurate as we would like, in theory, we could evaluate the probability of being housed and create thresholds. For example, anyone below 75% is at mild risk, below 50% is at moderate risk, and below 25% is at high risk.  Everyone above 75% would be considered minimal to no risk. 
 
