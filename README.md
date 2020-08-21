@@ -281,11 +281,7 @@ machine_dat$NightsJail.x = NULL
 machine_dat$NumTimesArrested.x = NULL
 
 ```
-Descriptives
-```{r}
 
-
-```
 
 
 Our next step is to identify if there are any high (i.e., .90 or greater) Spearman correlations between variables.  We used a Spearman correlation, as most variables are generally not normally distributed.  We found no correlation over .9.  
@@ -311,7 +307,7 @@ Next, we are evaluating the missing data using the Amelia package with five impu
 ```{r}
 library(Amelia)
 library(prettyR)
-
+miss_var_summary(machine_dat)
 #a.out_noms = amelia(x = machine_dat, m = 5, noms = c("Gender.x", "RaceWhite.x", "RaceBlack.x", "Employment.x", "Housing.x", "telehealth.x", "Housing.y", "anxiety", "mdd_r", "mdd_s", "another_sex_ident", "grant.x", "EverServed.x", "ActiveDuty_Else.x"), ords = c("Quarter.x", "Agegroup.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "ViolenceTrauma.x", "Education.x", "EnoughMoneyForNeeds.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x"), logs = c("drug_use" ,"er_hos_use_base", "jail_arrest_base", "NightsHomeless.x"))
 
 #saveRDS(a.out_noms, file = "a.out_noms_8_21_20.rds")
@@ -342,7 +338,35 @@ impute_dat_noms[,-c(2:4, 32, 34, 42:46, 48:51)] = impute_dat_noms[,-c(2:4, 32, 3
 impute_dat_noms
 ### Get rid of the x's
 colnames(impute_dat_noms) = gsub(".x", "", colnames(impute_dat_noms))
-write.csv(impute_dat_noms, "impute_dat_noms.csv", row.names = FALSE)
+
 
 ```
+Participant descriptives
+```{r}
+dim(impute_dat_noms)
+impute_dat_noms[,c(2:4, 32, 34, 42:46, 48:51)] = apply(impute_dat_noms[,c(2:4, 32, 34, 42:46, 48:51)], 2, function(x){as.factor(x)})
+
+part_charac =  prettyR::describe(impute_dat_noms[-c(1)])
+num_charac = data.frame(part_charac$Numeric)
+num_charac = num_charac[c(1,4),]
+num_charac = t(num_charac)
+num_charac = round(num_charac,2) 
+
+write.csv(num_charac, "num_charac.csv")
+
+fac_charac = data.frame(part_charac$Factor)
+fac_charac = round(fac_charac,2)
+fac_charac = t(fac_charac)
+write.csv(fac_charac, "fac_charac.csv")
+
+```
+Scale the numeric data and then turn into csv for machine learning in Python
+Need to scale in Python so you can save the means and sds
+```{r}
+#impute_dat_noms[,-c(2:4, 32, 34, 42:46, 48:51)] = apply(impute_dat_noms[,-c(2:4, 32, 34, 42:46, 48:51)], 2, function(x){scale(x)})
+
+write.csv(impute_dat_noms, "house_dat_8_13_20_scaled.csv", row.names = FALSE)
+
+```
+
 
