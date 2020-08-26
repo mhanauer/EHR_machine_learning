@@ -189,14 +189,17 @@ describe.factor(telehealth_noms_month6_noms$grant)
 
 head(telehealth_noms_base_noms)
 dim(telehealth_noms_month6_noms)
-telehealth_noms_wide_noms = merge(telehealth_noms_base_noms, telehealth_noms_month6_noms, by = "ConsumerID_grant", all.y = TRUE)
+telehealth_noms_wide_noms = merge(telehealth_noms_base_noms, telehealth_noms_month6_noms, by = "ConsumerID_grant", all.x = TRUE)
 dim(telehealth_noms_wide_noms)
 telehealth_noms_wide_noms = telehealth_noms_wide_noms[order(telehealth_noms_wide_noms$ConsumerID_grant),]
 telehealth_noms_month6_noms = telehealth_noms_month6_noms[order(telehealth_noms_month6_noms$ConsumerID_grant),]
-
+telehealth_noms_wide_noms$drop_out = ifelse(telehealth_noms_wide_noms$ConductedInterview.y == 0, 1, 0)
+describe.factor(telehealth_noms_wide_noms$drop_out)
 head(telehealth_noms_month6_noms)
-
-
+### Use first received services, because the date is always there; however, some vairation (0 to 15 dayes)
+telehealth_noms_wide_noms$FirstReceivedServicesDate.y = mdy(telehealth_noms_wide_noms$FirstReceivedServicesDate.y)
+### Only clients who are eligible for 6-month reassessments
+telehealth_noms_wide_noms = subset(telehealth_noms_wide_noms, FirstReceivedServicesDate.y < Sys.Date()-6*30)
 ```
 
 The code below is an example of using machine learning to predict housing generally based on Kuhn (2019) guide: https://topepo.github.io/caret/
@@ -211,7 +214,7 @@ We then created several binary demographics from nominal variables.  First, we e
 ```{r}
 
 telehealth_noms_wide_noms
-machine_dat =  telehealth_noms_wide_noms[c("Quarter.x", "DiagnosisOne.x", "Gender.x", "HispanicLatino.x", "RaceWhite.x", "RaceBlack.x", "Agegroup.x", "SexualIdentity.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "SchoolOrWork.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "Cocaine_Use.x", "Meth_Use.x", "RxOpioids_Use.x", "StreetOpioids_Use.x", "ViolenceTrauma.x", "VT_NightmaresThoughts.x", "VT_NotThinkAboutIt.x", "VT_OnGuard.x", "VT_NumbDetached.x", "PhysicallyHurt.x", "NightsHospitalMHC.x", "NightsDetox.x", "NightsJail.x", "TimesER.x", "Housing.x", "LivingConditionsSatisfaction.x", "Education.x", "Employment.x", "EnoughMoneyForNeeds.x", "NumTimesArrested.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x", "telehealth.x", "Housing.y", "grant.x", "Inhalants_Use.x", "Sedatives_Use.x", "Hallucinogens_Use.x", "Other_Use.x", "Stimulants_Use.x", "EverServed.x", "ActiveDuty_Else.x", "NightsHomeless.x")]
+machine_dat =  telehealth_noms_wide_noms[c("Quarter.x", "DiagnosisOne.x", "Gender.x", "HispanicLatino.x", "RaceWhite.x", "RaceBlack.x", "Agegroup.x", "SexualIdentity.x", "OverallHealth.x", "CapableManagingHealthCareNeeds.x", "HandlingDailyLife.x", "ControlLife.x", "DealWithCrisis.x", "GetsAlongWithFamily.x", "SocialSituations.x", "SchoolOrWork.x", "FunctioningHousing.x", "Symptoms.x", "Nervous.x", "Hopeless.x", "Restless.x", "Depressed.x", "EverythingEffort.x", "Worthless.x", "PsychologicalEmotionalProblems.x", "LifeQuality.x", "EnoughEnergyForEverydayLife.x", "PerformDailyActivitiesSatisfaction.x", "HealthSatisfaction.x", "RelationshipSatisfaction.x", "SelfSatisfaction.x", "Tobacco_Use.x", "Alcohol_Use.x", "Cannabis_Use.x", "Cocaine_Use.x", "Meth_Use.x", "RxOpioids_Use.x", "StreetOpioids_Use.x", "ViolenceTrauma.x", "VT_NightmaresThoughts.x", "VT_NotThinkAboutIt.x", "VT_OnGuard.x", "VT_NumbDetached.x", "PhysicallyHurt.x", "NightsHospitalMHC.x", "NightsDetox.x", "NightsJail.x", "TimesER.x", "Housing.x", "LivingConditionsSatisfaction.x", "Education.x", "Employment.x", "EnoughMoneyForNeeds.x", "NumTimesArrested.x", "Friendships.x", "EnjoyPeople.x", "BelongInCommunity.x", "SupportFromFamily.x", "SupportiveFamilyFriends.x", "GenerallyAccomplishGoal.x", "telehealth.x", "grant.x", "Inhalants_Use.x", "Sedatives_Use.x", "Hallucinogens_Use.x", "Other_Use.x", "Stimulants_Use.x", "EverServed.x", "ActiveDuty_Else.x", "NightsHomeless.x", "drop_out")]
 library(naniar)
 miss_var_summary(machine_dat)
 # Remove variables missing significantly more than 50%
@@ -235,7 +238,6 @@ machine_dat$Employment.x = ifelse(machine_dat$Employment.x <3,1,0)
 
 #Housing.x and y 1 = OWNED OR RENTED HOUSE, APARTMENT, TRAILER, ROOM
 machine_dat$Housing.x = ifelse(machine_dat$Housing.x == 1, 1,0)
-machine_dat$Housing.y = ifelse(machine_dat$Housing.y == 1, 1,0)
 #1= EMPLOYED FULL TIME (35+ HOURS PER WEEK, OR WOULD HAVE BEEN)
 #2 = EMPLOYED PART TIME
 
@@ -293,14 +295,39 @@ descCor = cor(machine_dat, use = "pairwise.complete.obs", method = "spearman")
 hig_corr = findCorrelation(descCor)
 hig_corr
 library(car)
-vif_model = glm(Housing.y ~ ., data = machine_dat)
+vif_model = glm(drop_out ~ ., data = machine_dat)
 summary(vif_model)
 vif_list =  vif(vif_model)
 vif_list = data.frame(vif_list) 
 vif_list = subset(vif_list, vif_list > 5)
 vif_list
 ```
+Quick review of descriptives
+```{r}
+machine_dat[,c(1:4, 32, 34, 42:45,47,48:51)] = apply(machine_dat[,c(1:4, 32, 34, 42:45, 47, 48:51)], 2, function(x){as.factor(x)})
 
+colnames(machine_dat) = gsub(".x", "", colnames(machine_dat))
+part_charac =  prettyR::describe(machine_dat)
+num_charac = data.frame(part_charac$Numeric)
+num_charac = num_charac[c(1,4),]
+num_charac = t(num_charac)
+num_charac = round(num_charac,2) 
+
+write.csv(num_charac, "num_charac.csv")
+
+fac_charac = data.frame(part_charac$Factor)
+fac_charac = round(fac_charac,2)
+fac_charac = t(fac_charac)
+write.csv(fac_charac, "fac_charac.csv")
+
+```
+
+
+Let's figure out how to address missing data within xgboost
+```{r}
+colnames(machine_dat) = gsub(".x", "", colnames(machine_dat))
+write.csv(machine_dat, "drop_out_8_10_20.csv", row.names = FALSE)
+```
 
 
 Next, we are evaluating the missing data using the Amelia package with five imputations.  The Amelia package has advantages over other packages (e.g., MICE), because we can set the type of variable (i.e., nominal, log).  In my personal experience, I have found the noms function works for binary variables better than binary, and a nominal regression with binary data reduces to a logistic regression.  More information on data imputation is available in the Amelia package documentation: https://gking.harvard.edu/amelia
