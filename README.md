@@ -344,9 +344,9 @@ colnames(impute_dat_noms) = gsub(".x", "", colnames(impute_dat_noms))
 Participant descriptives
 ```{r}
 dim(impute_dat_noms)
-impute_dat_noms[,c(2:4, 32, 34, 42:46, 48:51)] = apply(impute_dat_noms[,c(2:4, 32, 34, 42:46, 48:51)], 2, function(x){as.factor(x)})
+impute_dat_noms[,c(1:4, 32, 34, 42:46, 48:51)] = apply(impute_dat_noms[,c(1:4, 32, 34, 42:46, 48:51)], 2, function(x){as.factor(x)})
 
-part_charac =  prettyR::describe(impute_dat_noms[-c(1)])
+part_charac =  prettyR::describe(impute_dat_noms)
 num_charac = data.frame(part_charac$Numeric)
 num_charac = num_charac[c(1,4),]
 num_charac = t(num_charac)
